@@ -36,14 +36,21 @@ const getNotes = () =>
     }
   });
 
-const saveNote = (note) =>
-  fetch('/api/notes', {
+const saveNote = (note) => {
+  // Generate a unique id with the note
+  const uniqueId = uuidv4();
+
+  // Add the unique id to the note object
+  const noteWithId = { id: uniqueId, ...note };
+
+return fetch('/api/notes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(note)
+    body: JSON.stringify(noteWithId),
   });
+};
 
 const deleteNote = (id) =>
   fetch(`/api/notes/${id}`, {
@@ -78,16 +85,11 @@ const handleNoteSave = () => {
     text: noteText.value
   };
   saveNote(newNote).then(() => {
-  // Clear the boxes for a new note
-    noteTitle.value = '';
-    noteText.value = '';
-    // Refresh the notes
     getAndRenderNotes();
-
-    // Hide the buttons after saving
+    renderActiveNote();
+    // Hide the buttons after saving note
     hide(saveNoteBtn);
     hide(clearBtn);
-
   });
 };
 
@@ -113,10 +115,7 @@ const handleNoteDelete = (e) => {
 const handleNoteView = (e) => {
   e.preventDefault();
   activeNote = JSON.parse(e.target.parentElement.getAttribute('data-note'));
-
   renderActiveNote();
-
-  // Display the "New Note" button
   show(newNoteBtn);
 
 };
@@ -130,12 +129,21 @@ const handleNewNoteView = (e) => {
 
 // Renders the appropriate buttons based on the state of the form
 const handleRenderBtns = () => {
-  show(clearBtn);
-  if (noteTitle.value.trim() || noteText.value.trim()) {
-    show(saveNoteBtn);
+  const isTitleEmpty = !noteTitle.value.trim();
+  const isTextEmpty = !noteText.value.trim();
 
-  } else {
+  if (isTitleEmpty && isTextEmpty) {
+    // Both title and text are empty
+    hide(clearBtn);
     hide(saveNoteBtn);
+  } else if (!isTitleEmpty && isTextEmpty) {
+    // Title is not empty, but text is empty
+    show(clearBtn);
+    hide(saveNoteBtn);
+  } else {
+    // Both title and text are filled
+    show(clearBtn);
+    show(saveNoteBtn);
   }
 };
 
@@ -144,6 +152,7 @@ const renderNoteList = async (notes) => {
   let jsonNotes = await notes.json();
   if (window.location.pathname === '/notes') {
     noteList.forEach((el) => (el.innerHTML = ''));
+
   }
 
   let noteListItems = [];
@@ -204,11 +213,7 @@ if (window.location.pathname === '/notes') {
   saveNoteBtn.addEventListener('click', handleNoteSave);
   newNoteBtn.addEventListener('click', handleNewNoteView);
   clearBtn.addEventListener('click', renderActiveNote);
-  // Handle button visibility
-  noteForm.addEventListener('input', () => {
-    handleRenderBtns();
-
-  });
+  noteForm.addEventListener('input', handleRenderBtns);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
